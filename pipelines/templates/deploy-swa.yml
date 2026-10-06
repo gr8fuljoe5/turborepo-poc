@@ -1,0 +1,31 @@
+# Deploys a pre-built SPA artifact to an Azure Static Web App. The app is
+# already built by the Build stage, so the task is told to skip its own build.
+parameters:
+  - name: environment
+    type: string
+  - name: artifact
+    type: string
+  # Static Web Apps authenticate with a per-app deployment token, not a
+  # service connection. Store it as a secret in a variable group.
+  - name: deploymentToken
+    type: string
+
+jobs:
+  - deployment: Deploy
+    displayName: 'Deploy ${{ parameters.artifact }} to ${{ parameters.environment }}'
+    environment: ${{ parameters.environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - download: current
+              artifact: ${{ parameters.artifact }}
+
+            - task: AzureStaticWebApp@0
+              displayName: 'Azure Static Web App deploy'
+              inputs:
+                workingDirectory: $(Pipeline.Workspace)/${{ parameters.artifact }}
+                app_location: '/'
+                skip_app_build: true
+                skip_api_build: true
+                azure_static_web_apps_api_token: ${{ parameters.deploymentToken }}

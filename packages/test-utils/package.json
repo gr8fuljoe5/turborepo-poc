@@ -1,0 +1,33 @@
+{
+  "name": "@conning/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./render": "./src/render.tsx",
+    "./setup": "./src/setup.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@testing-library/dom": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@testing-library/user-event": "catalog:"
+  },
+  "peerDependencies": {
+    "@primer/react": "catalog:",
+    "react": "catalog:",
+    "vitest": "catalog:"
+  },
+  "devDependencies": {
+    "@conning/config": "workspace:*",
+    "@primer/react": "catalog:",
+    "@types/react": "catalog:",
+    "react": "catalog:",
+    "react-is": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,88 @@
+# server-b — build, test and deploy to Azure App Service.
+#
+# Servers depend on nothing in packages/ but the shared tsconfig, so the path
+# filters are narrower than the apps'. The Affected stage still runs as a
+# backstop.
+
+trigger:
+  branches:
+    include:
+      - main
+      - development
+  paths:
+    include:
+      - services/server-b/**
+      - packages/config/**
+      - pnpm-lock.yaml
+      - pipelines/server-b.yml
+      - pipelines/templates/**
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: package
+    value: 'server-b'
+  - name: packageDir
+    value: 'services/server-b'
+  # Placeholders — fill in once the ARM service connection and App Services exist.
+  - name: azureSubscription
+    value: 'REPLACE_ME_SERVICE_CONNECTION'
+  - name: appNameUat
+    value: 'REPLACE_ME_SERVER_B_UAT'
+  - name: appNameProd
+    value: 'REPLACE_ME_SERVER_B_PROD'
+
+stages:
+  - stage: Affected
+    jobs:
+      - template: templates/affected-check.yml
+        parameters:
+          package: server-b
+
+  - stage: Build
+    dependsOn: Affected
+    condition: eq(dependencies.Affected.outputs['Check.check.affected'], 'true')
+    jobs:
+      - job: Build
+        steps:
+          - template: templates/node-setup.yml
+          - template: templates/pnpm-install.yml
+
+          # A root-only task, so a filtered turbo run would skip it.
+          - script: pnpm format:check
+            displayName: 'prettier --check'
+
+          - script: pnpm turbo run typecheck test build --filter=$(package)...
+            displayName: 'turbo typecheck test build ($(package) and deps)'
+
+          - publish: $(packageDir)/dist
+            artifact: $(package)
+            displayName: 'Publish artifact: $(package)'
+
+  - stage: DeployUAT
+    displayName: 'Deploy UAT'
+    dependsOn: Build
+    jobs:
+      - template: templates/deploy-appservice.yml
+        parameters:
+          environment: server-b-uat
+          artifact: server-b
+          azureSubscription: $(azureSubscription)
+          appName: $(appNameUat)
+
+  - stage: DeployProd
+    displayName: 'Deploy Prod'
+    dependsOn: DeployUAT
+    # Only main reaches Prod; development stops at UAT. Add an approval check on
+    # the server-b-prod Environment to make this a manual gate.
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - template: templates/deploy-appservice.yml
+        parameters:
+          environment: server-b-prod
+          artifact: server-b
+          azureSubscription: $(azureSubscription)
+          appName: $(appNameProd)

@@ -1,0 +1,23 @@
+{
+  "name": "turborepo-poc",
+  "private": true,
+  "description": "Conning frontend monorepo POC — two SPAs, two API servers, shared UI packages",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "storybook": "turbo run storybook --filter=@conning/ui",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "devDependencies": {
+    "@conning/config": "workspace:*",
+    "prettier": "^3.9.5",
+    "turbo": "^2.11.7"
+  }
+}

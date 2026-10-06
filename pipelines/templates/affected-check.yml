@@ -1,0 +1,39 @@
+# A single job that decides whether `package` changed since the previous commit,
+# using Turborepo's dependency graph rather than path filters alone. The path
+# filters on each pipeline's trigger are a coarse first cut (e.g. any change
+# under packages/ wakes both app pipelines); this narrows it to packages that
+# are actually in `package`'s dependency tree.
+#
+# Sets the output variable `Check.check.affected` to 'true' or 'false'. Later
+# stages gate on it with:
+#   condition: eq(dependencies.Affected.outputs['Check.check.affected'], 'true')
+parameters:
+  - name: package
+    type: string
+
+jobs:
+  - job: Check
+    displayName: 'Is ${{ parameters.package }} affected?'
+    steps:
+      # turbo-ignore diffs against a base commit, so it needs history rather
+      # than the default shallow clone.
+      - checkout: self
+        fetchDepth: 0
+
+      - template: node-setup.yml
+
+      # turbo-ignore exits 0 when the build can be skipped and 1 when it can't.
+      # A manual run always builds.
+      - bash: |
+          if [ "$(Build.Reason)" = "Manual" ]; then
+            echo "Manual run — building regardless."
+            affected=true
+          elif npx --yes turbo-ignore ${{ parameters.package }} --fallback=HEAD^1; then
+            affected=false
+          else
+            affected=true
+          fi
+          echo "affected=$affected"
+          echo "##vso[task.setvariable variable=affected;isOutput=true]$affected"
+        name: check
+        displayName: 'turbo-ignore ${{ parameters.package }}'

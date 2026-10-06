@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+storybook-static/
+build-storybook.log
+coverage/
+
+# Turborepo local cache
+.turbo/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+test-results.xml

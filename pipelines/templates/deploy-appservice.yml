@@ -1,0 +1,33 @@
+# Deploys a server's dist/ artifact to a Linux Azure App Service. The artifact
+# is the raw .ts sources plus a generated package.json (see the server's
+# build.mjs); Node 22.18+ runs them directly, so there is no npm install step.
+parameters:
+  - name: environment
+    type: string
+  - name: artifact
+    type: string
+  - name: azureSubscription
+    type: string
+  - name: appName
+    type: string
+
+jobs:
+  - deployment: Deploy
+    displayName: 'Deploy ${{ parameters.artifact }} to ${{ parameters.environment }}'
+    environment: ${{ parameters.environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - download: current
+              artifact: ${{ parameters.artifact }}
+
+            - task: AzureWebApp@1
+              displayName: 'Azure App Service deploy'
+              inputs:
+                azureSubscription: ${{ parameters.azureSubscription }}
+                appType: webAppLinux
+                appName: ${{ parameters.appName }}
+                package: $(Pipeline.Workspace)/${{ parameters.artifact }}
+                runtimeStack: 'NODE|22-lts'
+                startUpCommand: 'node index.ts'

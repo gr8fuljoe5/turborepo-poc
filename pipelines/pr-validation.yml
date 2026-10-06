@@ -1,0 +1,26 @@
+# PR validation — typecheck and test every workspace affected by the PR.
+#
+# Azure Repos ignores YAML `pr:` triggers. To run this on pull requests, attach
+# it as a Build Validation policy on the target branch (Repos → Branches →
+# Branch policies → Build validation).
+
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  # Turbo's `[origin/main]` filter diffs against main, so it needs full history.
+  - checkout: self
+    fetchDepth: 0
+
+  - template: templates/node-setup.yml
+  - template: templates/pnpm-install.yml
+
+  - script: pnpm format:check
+    displayName: 'prettier --check'
+
+  # `...[origin/main]` = every workspace changed since main, plus everything
+  # that depends on one of them.
+  - script: pnpm turbo run typecheck test --filter=...[origin/main]
+    displayName: 'turbo typecheck test (affected since main)'

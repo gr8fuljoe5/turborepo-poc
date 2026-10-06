@@ -1,0 +1,87 @@
+# app-b — build, test and deploy to Azure Static Web Apps.
+#
+# Path filters wake this pipeline for anything app-b could depend on; the
+# Affected stage then asks Turborepo whether app-b's dependency graph really
+# changed and skips everything else if not.
+
+trigger:
+  branches:
+    include:
+      - main
+      - development
+  paths:
+    include:
+      - apps/app-b/**
+      - packages/**
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+      - pipelines/app-b.yml
+      - pipelines/templates/**
+
+pr: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: package
+    value: 'app-b'
+  - name: packageDir
+    value: 'apps/app-b'
+  # Placeholders. Define these as secrets in a variable group (Pipelines →
+  # Library) and link it here once the Static Web Apps exist.
+  - name: swaTokenUat
+    value: 'REPLACE_ME'
+  - name: swaTokenProd
+    value: 'REPLACE_ME'
+
+stages:
+  - stage: Affected
+    jobs:
+      - template: templates/affected-check.yml
+        parameters:
+          package: app-b
+
+  - stage: Build
+    dependsOn: Affected
+    condition: eq(dependencies.Affected.outputs['Check.check.affected'], 'true')
+    jobs:
+      - job: Build
+        steps:
+          - template: templates/node-setup.yml
+          - template: templates/pnpm-install.yml
+
+          # A root-only task, so a filtered turbo run would skip it.
+          - script: pnpm format:check
+            displayName: 'prettier --check'
+
+          - script: pnpm turbo run typecheck test build --filter=$(package)...
+            displayName: 'turbo typecheck test build ($(package) and deps)'
+
+          - publish: $(packageDir)/dist
+            artifact: $(package)
+            displayName: 'Publish artifact: $(package)'
+
+  - stage: DeployUAT
+    displayName: 'Deploy UAT'
+    dependsOn: Build
+    jobs:
+      - template: templates/deploy-swa.yml
+        parameters:
+          environment: app-b-uat
+          artifact: app-b
+          deploymentToken: $(swaTokenUat)
+
+  - stage: DeployProd
+    displayName: 'Deploy Prod'
+    dependsOn: DeployUAT
+    # Only main reaches Prod; development stops at UAT. Add an approval check on
+    # the app-b-prod Environment to make this a manual gate.
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - template: templates/deploy-swa.yml
+        parameters:
+          environment: app-b-prod
+          artifact: app-b
+          deploymentToken: $(swaTokenProd)

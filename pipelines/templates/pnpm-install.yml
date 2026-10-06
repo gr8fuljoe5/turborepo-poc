@@ -1,0 +1,17 @@
+# Restores the pnpm content-addressable store from the pipeline cache, then
+# installs. The cache key is the lockfile, so a dependency change is a cache
+# miss and everything else is a hit. Run node-setup.yml first.
+steps:
+  - script: echo "##vso[task.setvariable variable=PNPM_STORE]$(pnpm store path --silent)"
+    displayName: 'Locate pnpm store'
+
+  - task: Cache@2
+    displayName: 'Cache pnpm store'
+    inputs:
+      key: 'pnpm | "$(Agent.OS)" | pnpm-lock.yaml'
+      restoreKeys: |
+        pnpm | "$(Agent.OS)"
+      path: $(PNPM_STORE)
+
+  - script: pnpm install --frozen-lockfile
+    displayName: 'pnpm install'

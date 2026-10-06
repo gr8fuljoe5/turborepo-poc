@@ -1,0 +1,56 @@
+/* The single stylesheet every app imports first, from its main.tsx:
+     import '@conning/ui/styles.css';
+   It owns the cascade order for the whole page, so apps must not import
+   Tailwind or Primer's token CSS themselves. */
+
+/* Utilities only — Preflight is intentionally omitted so it doesn't clobber
+   Primer's BaseStyles reset. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* `primitives.css` carries size/spacing/typography only; the two theme files
+   define the colour tokens. Both are scoped to [data-color-mode][data-light-theme],
+   which Primer's ThemeProvider emits — every app mounts one in main.tsx. */
+@import '@primer/primitives/dist/css/primitives.css';
+@import '@primer/primitives/dist/css/functional/themes/light.css';
+@import '@primer/primitives/dist/css/functional/themes/dark.css';
+
+/* Tailwind's automatic source detection starts from the consuming app's
+   directory, so it would never see the classes used inside this package. */
+@source './components';
+
+/* The hand-rolled Conning palette. In portal-demo this lived in an inline
+   <style> in index.html, which Storybook never loads; declaring it here means
+   apps and Storybook resolve the same values. */
+:root {
+  --bg: #fffffb; /* near-white paper */
+  --bg-1: #f5f5f6; /* cream surface */
+  --bg-2: #ffffff; /* card surface */
+  --bg-3: #f4f3ee; /* warmer cream — table header bg */
+  --fg: #333333; /* body copy */
+  --fg-2: #73777c; /* secondary */
+  --fg-3: #8f8f8f; /* metadata */
+  --fg-headline: #011e60; /* navy headline */
+  --line: #f5f5f6; /* light row borders */
+  --line-2: #e3e3e8; /* stronger borders */
+  --accent: #011e60; /* primary navy */
+  --accent-2: #178e96; /* signature teal — dots, rules, non-text marks */
+  /* The teal fails WCAG AA as small text; use this darker step wherever it is text. */
+  --accent-2-text: #136f76;
+  --positive: #007d00;
+  --negative: #c0392b;
+  --warn: #c08a3e;
+  --font-display: 'Georgia';
+  --font-body: 'Arial';
+  --radius: 2px;
+  --radius-lg: 4px;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body, 'Arial', 'Helvetica Neue', Helvetica, sans-serif);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
